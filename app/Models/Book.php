@@ -11,9 +11,7 @@ class Book extends Model
     use HasFactory, HasUuids;
 
     protected $fillable = [
-        'book_code',
         'title',
-        'stock',
         'cover',
         'writer',
     ];

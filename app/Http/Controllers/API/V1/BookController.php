@@ -65,11 +65,8 @@ class BookController extends Controller
         
         //create book
         $book = Book::create([
-            'book_code' => $request->book_code,
             'title' => $request->title,
-            'stock' => $request->stock,
             'cover' => $url,
-            'description' => $request->description,
             'writer' => $request->writer
         ]);
 
@@ -138,16 +135,12 @@ class BookController extends Controller
         
             $book->update([
                 'title' => $request->title,
-                'stock' => $request->stock,
                 'cover' => $url,
-                'description' => $request->description,
                 'writer' => $request->writer
             ]);
         } else{
             $book->update([
                 'title' => $request->title,
-                'stock' => $request->stock,
-                'description' => $request->description,
                 'writer' => $request->writer
             ]);
         }
