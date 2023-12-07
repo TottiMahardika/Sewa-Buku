@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\API\V1;
 
 use App\Models\Book;
-use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BookResource;
 use App\Http\Requests\StoreBookRequest;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\UpdateBookRequest;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class BookController extends Controller
 {
@@ -18,31 +17,44 @@ class BookController extends Controller
      */
     public function index()
     {
-        $books = Book::All();
-    
+        $books = Book::latest()->paginate(5);
         if($books) {
             foreach($books as $book){
                 $book->cover = base64_decode($book->cover);
             }    
-            return response()->json([
-                'success' => true,
-                'book'    => BookResource::collection($books),  
-            ], 201);
+            return new BookResource(true, 'List Data Posts', $books);
         }
         return response()->json([
-            'success' => false,
+            'success' => false
         ], 409);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreBookRequest $request): JsonResponse
+    public function store(StoreBookRequest $request)
     {
         $data = $request->validated();
 
         if (!$data) {
             return response()->json($validator->errors(), 422);
+        }
+
+        $books = Book::All();
+        $exist = false;
+        foreach($books as $book){
+            if($book->title == $request->title && $book->writer == $request->writer){
+                $exist = true;
+                break;
+            }
+        } 
+
+        if($exist){
+            //return JSON process insert failed 
+            return response()->json([
+                'success' => false,
+                'message' => 'Buku dengan judul "' . $request->title . '" yang ditulis oleh "' . $request->writer . '" sudah ada.'
+            ], 409);
         }
 
         // Menyimpan file ke storage
@@ -63,34 +75,24 @@ class BookController extends Controller
 
         //return response JSON user is created
         if($book) {
-            return response()->json([
-                'success' => true,
-                'book'    => $book,  
-            ], 201);
+            return new BookResource(true, 'Data Book Berhasil Ditambahkan!', $book);
         }
-
-        //return JSON process insert failed 
-        return response()->json([
-            'success' => false,
-        ], 409);
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(string $id): JsonResponse
+    public function show(string $id)
     {
-        $book = Book::findOrFail($id);
-        if($book) {
-            $book->cover = base64_decode($book->cover);
+        try{
+            $book = Book::findOrFail($id);
+            return new BookResource(true, 'Data Book Ditemukan!', $book);
+        } catch(ModelNotFoundException $e){
             return response()->json([
-                'success' => true,
-                'book'    => $book,  
-            ], 201);
+                'success' => false,
+                'message' => 'Data Book Tidak Ditemukan!'
+            ], 404);
         }
-        return response()->json([
-            'success' => false,
-        ], 409);
     }
 
     /**
@@ -104,39 +106,52 @@ class BookController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        $book = Book::findOrFail($id);
-        
-        if($book){
-            $book->cover = base64_decode($book->cover);
-            Storage::delete($book->cover);
+        $books = Book::excludedId($id)->get();
+        if($books){
+            $exist = false;
+            foreach($books as $book){
+                if($book->title == $request->title && $book->writer == $request->writer){
+                    $exist = true;
+                    break;
+                }
+            }
+            if($exist){
+                //return JSON process insert failed 
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Buku dengan judul "' . $request->title . '" yang ditulis oleh "' . $request->writer . '" sudah ada.'
+                ], 409);
+            }
+        }
 
-             // Menyimpan file ke storage
-            $path = $request->file('cover')->store('cover', 'public');
+        $book = Book::findOrFail($id);
             
+        if($request->hasFile('cover')){
+            // Menyimpan file ke storage
+            $path = $request->file('cover')->store('cover', 'public');
+        
             // Mengambil URL untuk file
             $url = base64_encode(Storage::url($path));
+            
+            $book->cover = base64_decode($book->cover);
+            Storage::delete('/public'.str_replace('/storage', '', $book->cover));
         
-            $updated = $book->update([
+            $book->update([
                 'title' => $request->title,
                 'stock' => $request->stock,
                 'cover' => $url,
                 'description' => $request->description,
                 'writer' => $request->writer
             ]);
-
-            if($updated){
-                return response()->json([
-                    'success' => true,
-                    'book'    => $book,  
-                ], 201);
-            }
-            return response()->json([
-                'success' => false,
-            ], 409);
+        } else{
+            $book->update([
+                'title' => $request->title,
+                'stock' => $request->stock,
+                'description' => $request->description,
+                'writer' => $request->writer
+            ]);
         }
-        return response()->json([
-            'success' => false,
-        ], 409);
+        return new BookResource(true, 'Data Book Berhasil Diubah!', $book);
     }
 
     /**

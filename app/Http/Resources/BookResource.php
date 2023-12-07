@@ -7,20 +7,35 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class BookResource extends JsonResource
 {
+    public $status;
+    public $message;
+
+    /**
+     * __construct
+     *
+     * @param  mixed $status
+     * @param  mixed $message
+     * @param  mixed $resource
+     * @return void
+     */
+    public function __construct($status, $message, $resource)
+    {
+        parent::__construct($resource);
+        $this->status  = $status;
+        $this->message = $message;
+    }
+    
     /**
      * Transform the resource into an array.
      *
      * @return array<string, mixed>
      */
-    public function toArray(Request $request): array
+    public function toArray($request)
     {
         return [
-            'id' => $this->id,
-            'book_code' => $this->book_code,
-            'title' => $this->title,
-            'stock' => $this->stock,
-            'cover' => $this->cover,
-            'writer' => $this->writer,
+            'success'   => $this->status,
+            'message'   => $this->message,
+            'data'      => $this->resource
         ];
     }
 }

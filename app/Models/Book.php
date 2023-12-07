@@ -17,4 +17,9 @@ class Book extends Model
         'cover',
         'writer',
     ];
+
+    public function scopeExcludedId($query, $excludedId)
+    {
+        return $query->where('id', '!=', $excludedId);
+    }
 }
