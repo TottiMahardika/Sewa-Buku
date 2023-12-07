@@ -16,13 +16,6 @@ return new class extends Migration
             $table->string('username');
             $table->string('email')->unique();
             $table->string('password');
-            $table->string('phone')->nullable();
-            $table->text('address');
-            $table->enum('role', [
-				'admin',
-				'client'
-			]);
-            $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();
         });
